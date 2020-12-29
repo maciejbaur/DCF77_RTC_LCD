@@ -118,7 +118,7 @@ void podswietlenie()  {
 
 void RadioStopChime() {
   if (tm.minute == 0 && piknelo == false) { // jesli minuta jest rowna 0 i jeszcze nie piknelo
-    for (int i = 0; i < 3; i++) {           // dwa pikniecia
+    for (int i = 0; i < 3; i++) {           // odtwarzaj trzy sygnaly RadioStop o pelnej godzinie
       tone(buzzer, 1160);
       delay(buzzerDelay1);
       tone(buzzer, 1400);
