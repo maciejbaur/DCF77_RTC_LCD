@@ -2,7 +2,7 @@
 #include <Wire.h>               // standardowa biblioteka Arduino
 #include <LiquidCrystal_I2C.h>  // dolaczenie pobranej biblioteki I2C dla LCD
 #include <DS3231.h>             // biblioteka modułu RTC
-
+static byte resynctime = 0;     //for the first time sync after switched on, resynctime should be 0 like 0:00 o'clock
 
 LiquidCrystal_I2C lcd(0x27, 2, 1, 0, 4, 5, 6, 7, 3, POSITIVE);  // Ustawienie adresu ukladu na 0x27
 
@@ -59,7 +59,7 @@ void loop() {
   }
 
   // Ustawianie RTC po odebraniu sygnalu DCF77
-  if (syncOK == false && dt.day > 0)  {
+  if (syncOK == false && dt.day > 0 &&  resynctime = 0)  {          //I don't know if the syntax is correct but the logic should be ok
     lcd.clear();
     lcd.backlight();
     lcd.setCursor(0, 0);
@@ -71,6 +71,7 @@ void loop() {
     delay(2000);
     lcd.clear();
     syncOK = true;
+    resynctime = dt.hour;  //resynctime get the value of the actual hour and as soon it comes to 0 again, the if would be able to run again
   }
 }
 
