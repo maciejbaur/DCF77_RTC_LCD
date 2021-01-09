@@ -59,7 +59,7 @@ void loop() {
   }
 
   // Ustawianie RTC po odebraniu sygnalu DCF77
-  if (syncOK == false && dt.day > 0 &&  resynctime = 0)  {          //I don't know if the syntax is correct but the logic should be ok
+  if (syncOK == false && dt.day > 0 &&  resynctime == 0)  {          //I don't know if the syntax is correct but the logic should be ok
     lcd.clear();
     lcd.backlight();
     lcd.setCursor(0, 0);
