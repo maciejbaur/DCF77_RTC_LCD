@@ -1,2 +1,2 @@
 # DCF77_RTC_LCD
- Zegar oparty na DS3231 i odbiorniku DCF77
+DS3231 clock with 16x2 LCD and DCF77 receiver
