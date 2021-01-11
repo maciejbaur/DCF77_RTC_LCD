@@ -1,14 +1,14 @@
-#include "Funkuhr.h"                  // DCF77 receiver library
+#include "Funkuhr.h"                  // DCF77 receiver library https://github.com/fiendie/Funkuhr
 #include <Wire.h>                     // Standard Arduino library
 #include <LiquidCrystal_I2C.h>        // LCD I2C library
 #include <DS3231.h>                   // RTC library
 
 LiquidCrystal_I2C lcd(0x27, 2, 1, 0, 4, 5, 6, 7, 3, POSITIVE);  // LCD I2C interface address 0x27
 
-Funkuhr dcf;                          // DCF77 receiver declaration
+Funkuhr dcf(0, 2, 13, false);         // DCF77 receiver declaration (Int, CDFpin, LEDpin, invertSig)
 struct Dcf77Time dcfTime = {0};
-byte syncOK;
-byte resyncOK;
+byte syncOK = false;
+byte resyncOK = false;
 uint8_t curSec;
 
 #define DS3232_I2C_ADDRESS 0x68
@@ -18,7 +18,8 @@ RTCDateTime rtcTime;
 const byte dayBegin = 8;              // Day begin
 const byte dayEnd = 22;               // Day end
 
-const byte resyncFlagReset = 22;      // Resync flag is off to allow RTC reset at night
+const byte resyncFlagReset = 23;      // Resync flag is off to allow RTC reset at night
+byte resyncFlagResetDone = false;     // Resync flag set
 const byte resyncRTCtime = 1;         // Time when RTC is reset based on DCF77
 
 const byte pinBuzzer = 9;             // pin for Buzzer
@@ -35,24 +36,31 @@ void setup() {
   clock.begin();                      // DS3231 initialization
 
   pinMode(LED_BUILTIN, OUTPUT);
-  pinMode(pinBuzzer, OUTPUT);            // Set buzzer - pin 9 as an output
-
-  syncOK = false;
+  pinMode(pinBuzzer, OUTPUT);         // Set buzzer - pin 9 as an output
 }
 
 void loop() {
   dcf.getTime(dcfTime);               // reading data from DCF77
   rtcTime = clock.getDateTime();      // reading data from RTC
 
-  if (!dcf.synced()) {
+  if (!dcf.synced()) {                // if DCF77 is not synced
     syncOK = false;
     lcd.backlight();                  // LCD backlight ON
     lcd.setCursor(0, 0);
     lcd.print(" DCF77 decoding ");
     lcd.setCursor(0, 1);
     lcd.print(" in progress... ");
-  } else if (rtcTime.day > 0) {
-    digitalWrite(LED_BUILTIN, HIGH);
+  } else {                                        // if DCF77 is synced
+    if ((syncOK == false && dcfTime.day > 0))  {  // if RTC was not set yet and day is greater than 0 (date and time from DCF is available)
+      rtcSet();                                   // set RTC
+      syncOK = true;
+      resyncOK = true;
+    } else if (resyncOK == false && dcfTime.hour >= resyncRTCtime && dcfTime.day > 0) { // if reset RTC flag is off next RTC reset will be performed at night
+      rtcSet();                                   // set RTC
+      resyncOK = true;
+      resyncFlagResetDone == false;               // Resync flag was already set
+    }
+
     if (rtcTime.second != curSec)  {
       rtcLCD();                       // Show RTC date/time on LCD
       LCD_backlight();                // LCD backlight OFF during the night
@@ -61,22 +69,9 @@ void loop() {
     curSec = rtcTime.second;
   }
 
-  // Set RTC based on decoded DCF77 signal
-  if (dcf.synced()) {                             // if DCF77 was decoded correctly
-    if ((syncOK == false && dcfTime.day > 0))  {  // if RTC was not set yet and day is greater than 0 (date and time from DCF is available)
-      rtcSet();                                   // set RTC
-      syncOK = true;
-      resyncOK = true;
-    } else if (resyncOK == false && dcfTime.hour == resyncRTCtime && dcfTime.day > 0) { // if reset RTC flag is off next RTC reset will be performed at night
-      rtcSet();                                   // set RTC
-      resyncOK = true;
-    }
-  } else {
-    syncOK = false;                               // if RTC was not set yest than sync flag is set to off
-  }
-
-  if (dcfTime.hour >= resyncFlagReset) {
+  if (dcfTime.hour >= resyncFlagReset && resyncFlagResetDone == false) {
     resyncOK = false;                             // Resync flag set to off to allow RTC set next night
+    resyncFlagResetDone == true;                  // Resync flag was already set
   }
 }
 
@@ -133,7 +128,7 @@ void rtcLCD ()  {
     lcd.setCursor(0, 1);
     lcd.write(' ');         // or nothing if RTC was not set at night (* mark is remove at 11pm)
   }
-  
+
   if (dcf.synced())  {      // If synced, but it is always true after first sync and no change when DCF receiver is unplugged
     lcd.setCursor(15, 1);   // Second row, last character shows
     lcd.write('*');         // * if DCF77 is in sync
