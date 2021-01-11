@@ -19,9 +19,9 @@ RTCDateTime rtcTime;
 const byte dayBegin = 8;              // Day begin
 const byte dayEnd = 22;               // Day end
 
-const byte resyncFlagReset = 17;       // Resync flag is off to allow RTC reset at night
 byte resyncFlagResetDone = false;     // Resync flag set
-const byte resyncRTCtime = 18;         // Time when RTC is reset based on DCF77
+const byte resyncFlagReset = 21;      // Resync flag is off to allow RTC reset at night
+const byte resyncRTCtime = 22;        // Time when RTC is reset based on DCF77
 
 const byte pinLED = 13;               // pin for DCF77 signal LED
 const byte pinBuzzer = 9;             // pin for Buzzer
@@ -57,11 +57,12 @@ void loop() {
       rtcSet();                                   // set RTC
       syncOK = true;
       resyncOK = true;
+      resyncFlagResetDone = false;
     } 
     if (resyncOK == false && resyncFlagResetDone == true && dcfTime.hour == resyncRTCtime && dcfTime.day > 0) { // if reset RTC flag is off next RTC reset will be performed at night
       rtcSet();                                   // set RTC
       resyncOK = true;
-      resyncFlagResetDone == false;               // Resync flag was already set
+      resyncFlagResetDone = false;               // Resync flag was already set
     }
 
     if (rtcTime.second != curSec)  {
