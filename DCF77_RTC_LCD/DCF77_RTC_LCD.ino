@@ -6,8 +6,8 @@
 LiquidCrystal_I2C lcd(0x27, 2, 1, 0, 4, 5, 6, 7, 3, POSITIVE);  // LCD I2C interface address 0x27
 
 Funkuhr dcf(0, 2, 13, false);          // DCF77 receiver declaration (Int, CDFpin, LEDpin, invertSig)
-//Funkuhr dcf;                         // DCF77 receiver declaration
-struct Dcf77Time dcfTime = {0};
+
+struct Dcf77Time dt = {0};
 byte syncOK = false;
 byte resyncOK = false;
 uint8_t curSec;
@@ -42,7 +42,7 @@ void setup() {
 }
 
 void loop() {
-  dcf.getTime(dcfTime);               // reading data from DCF77
+  dcf.getTime(dt);               // reading data from DCF77
   rtcTime = clock.getDateTime();      // reading data from RTC
 
   if (!dcf.synced()) {                // if DCF77 is not synced
@@ -53,13 +53,13 @@ void loop() {
     lcd.setCursor(0, 1);
     lcd.print(" in progress... ");
   } else {                                        // if DCF77 is synced
-    if (syncOK == false && dcfTime.day > 0)  {    // if RTC was not set yet and day is greater than 0 (date and time from DCF is available)
+    if (syncOK == false && dt.day > 0)  {    // if RTC was not set yet and day is greater than 0 (date and time from DCF is available)
       rtcSet();                                   // set RTC
       syncOK = true;
       resyncOK = true;
       resyncFlagResetDone = false;
     } 
-    if (resyncOK == false && resyncFlagResetDone == true && dcfTime.hour == resyncRTCtime && dcfTime.day > 0) { // if reset RTC flag is off next RTC reset will be performed at night
+    if (resyncOK == false && resyncFlagResetDone == true && dt.hour == resyncRTCtime && dt.day > 0) { // if reset RTC flag is off next RTC reset will be performed at night
       rtcSet();                                   // set RTC
       resyncOK = true;
       resyncFlagResetDone = false;               // Resync flag was already set
@@ -75,7 +75,7 @@ void loop() {
     curSec = rtcTime.second;
   }
 
-  if (dcfTime.hour == resyncFlagReset && resyncFlagResetDone == false) {
+  if (dt.hour == resyncFlagReset && resyncFlagResetDone == false) {
     resyncOK = false;                 // Resync flag is disabled to allow RTC set next night
     resyncFlagResetDone = true;       // Resync flag was already reset
   }
@@ -91,7 +91,7 @@ void rtcSet ()  {
   lcd.setCursor(0, 0);
   lcd.print("** DCF77 RCVD **");
   delay(500);
-  clock.setDateTime(dcfTime.year + 2000, dcfTime.month, dcfTime.day, dcfTime.hour, dcfTime.min, dcfTime.sec);
+  clock.setDateTime(dt.year + 2000, dt.month, dt.day, dt.hour, dt.min, dt.sec);
   lcd.setCursor(0, 1);
   lcd.print("*** RTC SET! ***");
   delay(2000);
@@ -145,6 +145,9 @@ void statusMark() {
     lcd.setCursor(1, 1);
     lcd.write(' ');
   }
+
+    lcd.setCursor(14, 1);   // Second row, last character shows
+    lcd.print(dcf.synced());         // * if DCF77 is in sync
 
   if (dcf.synced())  {      // If DCF77 is synced (But it is always true after first sync and no change when DCF receiver is unplugged)
     lcd.setCursor(15, 1);   // Second row, last character shows
