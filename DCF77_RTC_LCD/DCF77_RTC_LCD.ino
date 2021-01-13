@@ -1,88 +1,90 @@
-#include "Funkuhr.h"                  // DCF77 receiver library https://github.com/fiendie/Funkuhr
+#include "Funkuhr.h"                  // DCF77 receiver modified library (modified https://github.com/maciejbaur/Funkuhr) (original https://github.com/fiendie/Funkuhr)
 #include <Wire.h>                     // Standard Arduino library
 #include <LiquidCrystal_I2C.h>        // LCD I2C library
 #include <DS3231.h>                   // RTC library
 
 LiquidCrystal_I2C lcd(0x27, 2, 1, 0, 4, 5, 6, 7, 3, POSITIVE);  // LCD I2C interface address 0x27
 
-Funkuhr dcf(0, 2, 13, false);          // DCF77 receiver declaration (Int, CDFpin, LEDpin, invertSig)
+Funkuhr dcf(0, 2, 13, false);         // DCF77 receiver declaration (Int, CDFpin, LEDpin, invertSig)
 
 struct Dcf77Time dt = {0};
-byte syncOK = false;
-byte resyncOK = false;
+byte rtcFirstSet = false;
+byte rtcReSet = false;
 uint8_t curSec;
 
 #define DS3232_I2C_ADDRESS 0x68
 DS3231 clock;
 RTCDateTime rtcTime;
 
-const byte dayBegin = 8;              // Day begin
-const byte dayEnd = 22;               // Day end
+const byte dayBegin = 8;                  // Day begin
+const byte dayEnd = 22;                   // Day end
 
-byte resyncFlagResetDone = false;     // Resync flag set
-const byte resyncFlagReset = 21;      // Resync flag is off to allow RTC reset at night
-const byte resyncRTCtime = 22;        // Time when RTC is reset based on DCF77
+byte rtcReSetAllowed = false;             // RTC reset allowed flag
+const byte rtcReSetAllowedEnabled = 18;   // Time when Resync flag is set to true to allow RTC reset at night
+const byte rtcReSetTime = 22;             // Time when RTC is reset based on DCF77
 
-const byte pinLED = 13;               // pin for DCF77 signal LED
-const byte pinBuzzer = 9;             // pin for Buzzer
-const int buzzerDelay1 = 100;         // Chime short delay
-const int buzzerDelay2 = 600;         // Chime long delay
-bool chimeSent = false;               // Chime flag
+const byte pinLED = 13;                   // pin for DCF77 signal LED
+const byte pinBuzzer = 9;                 // pin for Buzzer
+const int buzzerDelay1 = 100;             // Chime short delay
+const int buzzerDelay2 = 600;             // Chime long delay
+bool chimeSent = false;                   // Chime flag
 
 void setup() {
-  lcd.begin(16, 2);                   // LCD 2x16 initialization
-  lcd.backlight();                    // LCD backlight ON
+  lcd.begin(16, 2);                       // LCD 2x16 initialization
+  lcd.backlight();                        // LCD backlight ON
 
-  dcf.init();                         // DCF77 receiver initialization
+  dcf.init();                             // DCF77 receiver initialization
 
-  clock.begin();                      // DS3231 initialization
+  clock.begin();                          // DS3231 initialization
 
-  pinMode(pinLED, OUTPUT);            // DCF77 bit receive indication LED
-  pinMode(pinBuzzer, OUTPUT);         // Set buzzer - pin 9 as an output
+  pinMode(pinLED, OUTPUT);                // DCF77 bit receive indication LED
+  pinMode(pinBuzzer, OUTPUT);             // Set buzzer - pin 9 as an output
 }
 
 void loop() {
-  dcf.getTime(dt);               // reading data from DCF77
-  rtcTime = clock.getDateTime();      // reading data from RTC
+  dcf.getTime(dt);                                // reading data from DCF77
+  rtcTime = clock.getDateTime();                  // reading data from RTC
 
-  if (!dcf.synced()) {                // if DCF77 is not synced
-    syncOK = false;
-    lcd.backlight();                  // LCD backlight ON
+  if (!dcf.synced() && rtcFirstSet == false) {    // if DCF77 is not decoded and RTC was never set (waiting for DCF77 data)
+    rtcFirstSet = false;                          // RTC need to be set
+    lcd.backlight();
     lcd.setCursor(0, 0);
     lcd.print(" DCF77 decoding ");
     lcd.setCursor(0, 1);
     lcd.print(" in progress... ");
-  } else {                                        // if DCF77 is synced
-    if (syncOK == false && dt.day > 0)  {    // if RTC was not set yet and day is greater than 0 (date and time from DCF is available)
-      rtcSet();                                   // set RTC
-      syncOK = true;
-      resyncOK = true;
-      resyncFlagResetDone = false;
+  } else {                                        // if DCF77 decoded
+    if (rtcFirstSet == false && dt.day > 0)  {    // if RTC was not set yet and day is greater than 0 (date and time from DCF is available)
+      rtcSet();                                   // initial RTC set
+      rtcFirstSet = true;
+      rtcReSet = true;
+      rtcReSetAllowed = false;
     } 
-    if (resyncOK == false && resyncFlagResetDone == true && dt.hour == resyncRTCtime && dt.day > 0) { // if reset RTC flag is off next RTC reset will be performed at night
+    if (dcf.synced() && rtcReSet == false && rtcReSetAllowed == true && dt.hour == rtcReSetTime && dt.day > 0) {
+      // if DCF signal is decoded, reset RTC is allowed to reset then next RTC reset will be performed at configured time (rtcReSetTime)
       rtcSet();                                   // set RTC
-      resyncOK = true;
-      resyncFlagResetDone = false;               // Resync flag was already set
+      rtcReSet = true;
+      rtcReSetAllowed = false;                    // RTC reset is blocked for next day
     }
 
     if (rtcTime.second != curSec)  {
       // Show RTC date and time
-      rtcLCD();                       // Show RTC date/time on LCD
-      statusMark();                   // Show status marks * on LCD
-      LCD_backlight();                // LCD backlight OFF during the night
-      RadioStopChime();               // Chime at full hour
+      rtcLCD();                                   // Show RTC date/time on LCD
+      statusMark();                               // Show status marks * on LCD
+      LCD_backlight();                            // LCD backlight OFF during the night
+      RadioStopChime();                           // Chime at full hour
     }
     curSec = rtcTime.second;
   }
 
-  if (dt.hour == resyncFlagReset && resyncFlagResetDone == false) {
-    resyncOK = false;                 // Resync flag is disabled to allow RTC set next night
-    resyncFlagResetDone = true;       // Resync flag was already reset
+  if (dt.hour == rtcReSetAllowedEnabled && rtcReSetAllowed == false) {
+    // If RTC reset is not allowed yet and time for reset is comming
+    rtcReSet = false;                             // RTC reset flag is disabled to allow RTC reset
+    rtcReSetAllowed = true;                       // RTC reset is allowed
   }
 }
 
 
-// -- Funkcje pomocnicze --
+// -- Private Functions --
 
 void rtcSet ()  {
   // Setting RTC based on DCF77 date and time
@@ -131,14 +133,14 @@ void print2digits(byte number) {
 
 void statusMark() {
   // Use * asterisk mark on LCD to indicate sync and resync status
-  if (resyncOK == true)  {
+  if (rtcReSet == true)  {
     lcd.setCursor(0, 1);    // Second row, first character shows
     lcd.write('*');         // * if RTC reset at night was performed
   } else {
     lcd.setCursor(0, 1);
     lcd.write(' ');
   }
-  if (resyncFlagResetDone == true)  {
+  if (rtcReSetAllowed == true)  {
     lcd.setCursor(1, 1);    // Second row, second character shows
     lcd.write('*');         // * if RTC reset flag was set to allow RTC reset next time (next night)
   } else {
@@ -146,10 +148,8 @@ void statusMark() {
     lcd.write(' ');
   }
 
-    lcd.setCursor(14, 1);   // Second row, last character shows
-    lcd.print(dcf.synced());         // * if DCF77 is in sync
 
-  if (dcf.synced())  {      // If DCF77 is synced (But it is always true after first sync and no change when DCF receiver is unplugged)
+  if (dcf.synced())  {      // If DCF77 is decoded
     lcd.setCursor(15, 1);   // Second row, last character shows
     lcd.write('*');         // * if DCF77 is in sync
   } else {
