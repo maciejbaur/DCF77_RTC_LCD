@@ -20,8 +20,8 @@ const byte dayBegin = 8;                  // Day begin
 const byte dayEnd = 22;                   // Day end
 
 byte rtcReSetAllowed = false;             // RTC reset allowed flag
-const byte rtcReSetAllowedEnabled = 18;   // Time when Resync flag is set to true to allow RTC reset at night
-const byte rtcReSetTime = 22;             // Time when RTC is reset based on DCF77
+const byte rtcReSetAllowedEnabled = 1;    // Time when Resync flag is set to true to allow RTC reset at night
+const byte rtcReSetTime = 2;              // Time when RTC is reset based on DCF77
 
 const byte pinLED = 13;                   // pin for DCF77 signal LED
 const byte pinBuzzer = 9;                 // pin for Buzzer
