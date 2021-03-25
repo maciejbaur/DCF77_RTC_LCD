@@ -133,20 +133,20 @@ void print2digits(byte number) {
 
 void statusMark() {
   // Use * asterisk mark on LCD to indicate sync and resync status
-  if (rtcReSet == true)  {
+  if (rtcReSet == true && rtcReSetAllowed == false)  {
     lcd.setCursor(0, 1);    // Second row, first character shows
-    lcd.write('*');         // * if RTC reset at night was performed
+    lcd.write('*');         // * if RTC reset at night was performed and reset fag is not set
   } else {
     lcd.setCursor(0, 1);
     lcd.write(' ');
   }
-  if (rtcReSetAllowed == true)  {
-    lcd.setCursor(1, 1);    // Second row, second character shows
+  /*if (rtcReSetAllowed == true)  {
+    lcd.setCursor(0, 1);    // Second row, first character shows
     lcd.write('*');         // * if RTC reset flag was set to allow RTC reset next time (next night)
   } else {
     lcd.setCursor(1, 1);
     lcd.write(' ');
-  }
+  }*/
 
 
   if (dcf.synced())  {      // If DCF77 is decoded
