@@ -20,8 +20,8 @@ const byte dayBegin = 8;                  // Day begin
 const byte dayEnd = 22;                   // Day end
 
 byte rtcReSetAllowed = false;             // RTC reset allowed flag
-const byte rtcReSetAllowedEnabled = 1;    // Time when Resync flag is set to true to allow RTC reset at night
-const byte rtcReSetTime = 2;              // Time when RTC is reset based on DCF77
+const byte rtcReSetAllowedEnabled = 18;    // Time when Resync flag is set to true to allow RTC reset at night
+const byte rtcReSetTime = 19;              // Time when RTC is reset based on DCF77
 
 const byte pinLED = 13;                   // pin for DCF77 signal LED
 const byte pinBuzzer = 9;                 // pin for Buzzer
@@ -133,20 +133,20 @@ void print2digits(byte number) {
 
 void statusMark() {
   // Use * asterisk mark on LCD to indicate sync and resync status
-  if (rtcReSet == true && rtcReSetAllowed == false)  {
+  if (rtcReSet == true)  {
     lcd.setCursor(0, 1);    // Second row, first character shows
     lcd.write('*');         // * if RTC reset at night was performed and reset fag is not set
   } else {
     lcd.setCursor(0, 1);
     lcd.write(' ');
   }
-  /*if (rtcReSetAllowed == true)  {
+  if (rtcReSetAllowed == true)  {
     lcd.setCursor(0, 1);    // Second row, first character shows
     lcd.write('*');         // * if RTC reset flag was set to allow RTC reset next time (next night)
   } else {
     lcd.setCursor(1, 1);
     lcd.write(' ');
-  }*/
+  }
 
 
   if (dcf.synced())  {      // If DCF77 is decoded
