@@ -20,8 +20,8 @@ const byte dayBegin = 8;                  // Day begin
 const byte dayEnd = 22;                   // Day end
 
 byte rtcReSetAllowed = false;             // RTC reset allowed flag
-const byte rtcReSetAllowedEnabled = 18;    // Time when Resync flag is set to true to allow RTC reset at night
-const byte rtcReSetTime = 19;              // Time when RTC is reset based on DCF77
+const byte rtcReSetAllowedEnabled = 3;    // Time when Resync flag is set to true to allow RTC reset at night
+const byte rtcReSetTime = 4;              // Time when RTC is reset based on DCF77
 
 const byte pinLED = 13;                   // pin for DCF77 signal LED
 const byte pinBuzzer = 9;                 // pin for Buzzer
@@ -76,7 +76,7 @@ void loop() {
     curSec = rtcTime.second;
   }
 
-  if (dt.hour == rtcReSetAllowedEnabled && rtcReSetAllowed == false) {
+  if (rtcTime.hour == rtcReSetAllowedEnabled && rtcReSetAllowed == false) {
     // If RTC reset is not allowed yet and time for reset is comming
     rtcReSet = false;                             // RTC reset flag is disabled to allow RTC reset
     rtcReSetAllowed = true;                       // RTC reset is allowed
@@ -133,28 +133,23 @@ void print2digits(byte number) {
 
 void statusMark() {
   // Use * asterisk mark on LCD to indicate sync and resync status
-  if (rtcReSet == true)  {
+  if (rtcReSet == true && rtcReSetAllowed == false)  {
     lcd.setCursor(0, 1);    // Second row, first character shows
-    lcd.write('*');         // * if RTC reset at night was performed and reset fag is not set
+    lcd.write('*');         // * if RTC reset at night was performed
+  } else if (rtcReSet == false && rtcReSetAllowed == true) {
+    lcd.setCursor(0, 1);
+    lcd.write('>');         // > if RTC reset is allowed
   } else {
     lcd.setCursor(0, 1);
-    lcd.write(' ');
+    lcd.write('!');         // ! if RTC reset was allowed but not performed
   }
-  if (rtcReSetAllowed == true)  {
-    lcd.setCursor(0, 1);    // Second row, first character shows
-    lcd.write('*');         // * if RTC reset flag was set to allow RTC reset next time (next night)
-  } else {
-    lcd.setCursor(1, 1);
-    lcd.write(' ');
-  }
-
 
   if (dcf.synced())  {      // If DCF77 is decoded
     lcd.setCursor(15, 1);   // Second row, last character shows
     lcd.write('*');         // * if DCF77 is in sync
   } else {
     lcd.setCursor(15, 1);
-    lcd.write(' ');
+    lcd.write('-');         // - if DCF77 is not in sync
   }
 }
 
