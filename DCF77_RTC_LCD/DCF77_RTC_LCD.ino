@@ -132,16 +132,19 @@ void print2digits(byte number) {
 }
 
 void statusMark() {
-  // Use * asterisk mark on LCD to indicate sync and resync status
+  // Use mark on LCD to indicate sync and resync status
   if (rtcReSet == true && rtcReSetAllowed == false)  {
     lcd.setCursor(0, 1);    // Second row, first character shows
-    lcd.write('*');         // * if RTC reset at night was performed
-  } else if (rtcReSet == false && rtcReSetAllowed == true) {
+    lcd.write('*');         // if RTC reset at night was performed
+  } else if (rtcReSet == false && rtcReSetAllowed == true && (rtcTime.hour == rtcReSetAllowedEnabled || rtcTime.hour == rtcReSetTime)) {
     lcd.setCursor(0, 1);
-    lcd.write('>');         // > if RTC reset is allowed
-  } else {
+    lcd.write('>');         // if RTC reset is allowed
+  } else if (rtcReSet == false && rtcReSetAllowed == true && (rtcTime.hour != rtcReSetAllowedEnabled && rtcTime.hour != rtcReSetTime)) {
     lcd.setCursor(0, 1);
-    lcd.write('!');         // ! if RTC reset was allowed but not performed
+    lcd.write('!');         // if RTC reset was allowed but not performed in due time
+  } else { 
+    lcd.setCursor(0, 1);
+    lcd.write('?');         // if something unknown happened
   }
 
   if (dcf.synced())  {      // If DCF77 is decoded
