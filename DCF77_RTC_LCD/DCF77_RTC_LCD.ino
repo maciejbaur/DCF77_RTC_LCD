@@ -88,12 +88,12 @@ void loop() {
 
 void rtcSet ()  {
   // Setting RTC based on DCF77 date and time
+  clock.setDateTime(dt.year + 2000, dt.month, dt.day, dt.hour, dt.min, dt.sec);
   lcd.clear();
   lcd.backlight();
   lcd.setCursor(0, 0);
   lcd.print("** DCF77 RCVD **");
   delay(500);
-  clock.setDateTime(dt.year + 2000, dt.month, dt.day, dt.hour, dt.min, dt.sec);
   lcd.setCursor(0, 1);
   lcd.print("*** RTC SET! ***");
   delay(2000);
